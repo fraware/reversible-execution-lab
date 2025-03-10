@@ -1,19 +1,39 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
+import { checkSupabaseConnection } from '@/lib/supabase';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLogin, setIsLogin] = useState(true);
+  const [connectionStatus, setConnectionStatus] = useState<boolean | null>(null);
   const { signIn, signUp, error, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Check Supabase connection on component mount
+    const checkConnection = async () => {
+      const isConnected = await checkSupabaseConnection();
+      setConnectionStatus(isConnected);
+      
+      if (!isConnected) {
+        toast({
+          title: "Connection Error",
+          description: "Could not connect to Supabase. Please check your API keys.",
+          variant: "destructive",
+        });
+      }
+    };
+    
+    checkConnection();
+  }, [toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +80,12 @@ const Login: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {connectionStatus === false && (
+            <div className="mb-4 p-3 border border-red-300 bg-red-50 rounded text-red-700">
+              <strong>Connection Error:</strong> Could not connect to Supabase. Please check your API keys or try again later.
+            </div>
+          )}
+          
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-medium">Email</label>
@@ -93,7 +119,7 @@ const Login: React.FC = () => {
             <Button 
               type="submit" 
               className="w-full" 
-              disabled={loading}
+              disabled={loading || connectionStatus === false}
             >
               {loading ? 'Processing...' : isLogin ? 'Login' : 'Sign Up'}
             </Button>
