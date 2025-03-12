@@ -1,4 +1,6 @@
 
+import { GraphData } from './graph';
+
 export interface Variable {
   name: string;
   value: any;
@@ -20,6 +22,7 @@ export interface ExecutionState {
   callStack: StackFrame[];
   timestamp: Date;
   memory: number;  // Memory usage in bytes
+  objectGraph?: GraphData; // Graph representation of object relationships
 }
 
 export interface CheckpointData {

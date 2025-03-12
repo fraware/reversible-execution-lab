@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Variable } from '@/types/debugger';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatBytes } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 interface StateViewerProps {
   variables: Variable[];
@@ -55,10 +56,14 @@ const StateViewer: React.FC<StateViewerProps> = ({
                       {v.type || typeof v.value}
                     </td>
                     <td className="p-2">
-                      {v.changed && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                      {v.changed ? (
+                        <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200">
                           Changed
-                        </span>
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-muted-foreground">
+                          Unchanged
+                        </Badge>
                       )}
                     </td>
                   </tr>

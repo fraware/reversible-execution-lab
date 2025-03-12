@@ -1,9 +1,12 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ControlPanel from '@/components/ControlPanel';
 import CodeViewer from '@/components/CodeViewer';
 import StateViewer from '@/components/StateViewer';
 import DebugChat from '@/components/DebugChat';
+import ExecutionTraceVisualizer from '@/components/ExecutionTraceVisualizer';
+import ObjectRelationshipView from '@/components/ObjectRelationshipView';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,7 +16,7 @@ import { debuggerService, createExecutionStatisticsTable } from '@/lib/debuggerS
 import { executeCode, createCheckpoint, restoreFromCheckpoint, analyzeCode } from '@/lib/executionEngine';
 import { ExecutionState, CheckpointData, Variable } from '@/types/debugger';
 import { useToast } from '@/components/ui/use-toast';
-import { Code, Play, Pause, Save, FileDown, Bookmark, RotateCcw } from 'lucide-react';
+import { Code, Play, Pause, Save, FileDown, Bookmark, RotateCcw, Share2 } from 'lucide-react';
 
 const samplePythonCode = `def fibonacci(n):
     if n <= 1:
@@ -34,15 +37,33 @@ const sampleJsCode = `function factorial(n) {
 let result = factorial(5);
 console.log(result);`;
 
+const sampleDataStructureCode = `// Linked List implementation
+function createNode(value) {
+  return { value, next: null };
+}
+
+let head = createNode(1);
+head.next = createNode(2);
+head.next.next = createNode(3);
+head.next.next.next = createNode(4);
+
+// Traverse the list
+let current = head;
+while (current !== null) {
+  console.log(current.value);
+  current = current.next;
+}`;
+
 const Index = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentLine, setCurrentLine] = useState(1);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [checkpoints, setCheckpoints] = useState<CheckpointData[]>([]);
-  const [code, setCode] = useState(samplePythonCode);
-  const [language, setLanguage] = useState<string>('python');
+  const [code, setCode] = useState(sampleDataStructureCode);
+  const [language, setLanguage] = useState<string>('javascript');
   const [currentState, setCurrentState] = useState<ExecutionState | null>(null);
   const [allStates, setAllStates] = useState<ExecutionState[]>([]);
+  const [currentStateIndex, setCurrentStateIndex] = useState(0);
   const [executionSpeed, setExecutionSpeed] = useState<number>(500); // ms between steps
   const [memoryUsage, setMemoryUsage] = useState<number>(0);
   const [executionTime, setExecutionTime] = useState<number>(0);
@@ -50,6 +71,7 @@ const Index = () => {
   const [isSessionSaving, setIsSessionSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("code");
   const [showCheckpointsDialog, setShowCheckpointsDialog] = useState(false);
+  const [visualizationMode, setVisualizationMode] = useState<'state' | 'trace' | 'graph'>('state');
   
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -126,7 +148,8 @@ const Index = () => {
           returnLine: -1
         }],
         timestamp: new Date(),
-        memory: 0
+        memory: 0,
+        objectGraph: { nodes: [], edges: [] }
       });
       
       setIsCodeAnalyzed(true);
@@ -159,6 +182,7 @@ const Index = () => {
       const endTime = performance.now();
       setExecutionTime(endTime - startTime);
       setAllStates(states);
+      setCurrentStateIndex(states.length - 1);
       setIsPlaying(false);
       
       if (sessionId) {
@@ -198,8 +222,10 @@ const Index = () => {
     if (prevLineIndex >= 0) {
       setCurrentState(allStates[prevLineIndex]);
       setCurrentLine(allStates[prevLineIndex].line);
+      setCurrentStateIndex(prevLineIndex);
     } else {
       setCurrentLine(1);
+      setCurrentStateIndex(0);
     }
   };
 
@@ -237,6 +263,10 @@ const Index = () => {
           });
           return newStates;
         });
+        
+        if (states.length > 0) {
+          setCurrentStateIndex(states.length - 1);
+        }
       });
     } else {
       const nextLineIndex = allStates.findIndex(state => state.line === currentLine) + 1;
@@ -263,6 +293,7 @@ const Index = () => {
         
         setCurrentState(updatedState);
         setCurrentLine(nextState.line);
+        setCurrentStateIndex(nextLineIndex);
       }
     }
   };
@@ -273,6 +304,7 @@ const Index = () => {
     setCurrentLine(1);
     setIsPlaying(false);
     setAllStates([]);
+    setCurrentStateIndex(0);
     analyzeAndUpdateState();
   };
   
@@ -288,12 +320,9 @@ const Index = () => {
     
     if (!sessionId) {
       if (process.env.NODE_ENV === 'development') {
+        console.log('Creating checkpoint in development mode with mock session ID');
         const mockSessionId = `mock-session-${Date.now()}`;
         setSessionId(mockSessionId);
-        toast({
-          title: 'Development Mode',
-          description: 'Using mock session for checkpoint creation',
-        });
         
         try {
           setIsSessionSaving(true);
@@ -333,6 +362,9 @@ const Index = () => {
     
     try {
       setIsSessionSaving(true);
+      console.log('Creating checkpoint with session ID:', sessionId);
+      console.log('Current state:', currentState);
+      
       const checkpointData = createCheckpoint(currentState, sessionId, `Checkpoint at line ${currentLine}`);
       
       const { data, error } = await debuggerService.saveCheckpoint(checkpointData);
@@ -359,8 +391,13 @@ const Index = () => {
     }
   };
   
+  const handleJumpToCheckpoint = () => {
+    setShowCheckpointsDialog(true);
+  };
+  
   const handleRestoreCheckpoint = (checkpoint: CheckpointData) => {
     try {
+      console.log('Restoring checkpoint:', checkpoint);
       const state = restoreFromCheckpoint(checkpoint);
       
       if (currentState) {
@@ -380,6 +417,12 @@ const Index = () => {
       setCurrentState(state);
       setCurrentLine(state.line);
       setShowCheckpointsDialog(false);
+      
+      // Find matching state in allStates by line number
+      const stateIndex = allStates.findIndex(s => s.line === state.line);
+      if (stateIndex >= 0) {
+        setCurrentStateIndex(stateIndex);
+      }
       
       toast({
         title: 'Checkpoint Restored',
@@ -401,11 +444,23 @@ const Index = () => {
     if (newLanguage === 'python') {
       setCode(samplePythonCode);
     } else if (newLanguage === 'javascript') {
-      setCode(sampleJsCode);
+      if (code === samplePythonCode) {
+        setCode(sampleJsCode);
+      }
     }
     
     setAllStates([]);
     setCurrentLine(1);
+    setCurrentStateIndex(0);
+  };
+  
+  const handleSelectExecutionState = (index: number) => {
+    if (index >= 0 && index < allStates.length) {
+      const state = allStates[index];
+      setCurrentState(state);
+      setCurrentLine(state.line);
+      setCurrentStateIndex(index);
+    }
   };
   
   const handleSaveSession = async () => {
@@ -446,10 +501,6 @@ const Index = () => {
   const handleLogout = async () => {
     await signOut();
     navigate('/login');
-  };
-
-  const handleJumpToCheckpoint = () => {
-    setShowCheckpointsDialog(true);
   };
 
   return (
@@ -502,6 +553,16 @@ const Index = () => {
                 <Code size={16} />
                 JavaScript
               </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCode(sampleDataStructureCode)}
+                className="flex items-center gap-1"
+              >
+                <Share2 size={16} />
+                Use Data Structure Example
+              </Button>
             </div>
             
             <Tabs defaultValue="code" value={activeTab} onValueChange={setActiveTab}>
@@ -520,7 +581,14 @@ const Index = () => {
               </TabsContent>
               
               <TabsContent value="execution" className="mt-2">
-                <CodeViewer code={code} currentLine={currentLine} />
+                <CodeViewer 
+                  code={code} 
+                  currentLine={currentLine}
+                  heatmap={allStates.reduce((acc, state) => {
+                    acc[state.line] = (acc[state.line] || 0) + 1;
+                    return acc;
+                  }, {} as Record<number, number>)}
+                />
               </TabsContent>
             </Tabs>
             
@@ -571,11 +639,51 @@ const Index = () => {
           </div>
           
           <div className="space-y-4">
-            <StateViewer 
-              variables={currentState?.variables || []}
-              memoryUsage={memoryUsage}
-              executionTime={executionTime}
-            />
+            <div className="flex flex-wrap gap-2 mb-4">
+              <Button 
+                variant={visualizationMode === 'state' ? 'default' : 'outline'} 
+                size="sm"
+                onClick={() => setVisualizationMode('state')}
+              >
+                Variable State
+              </Button>
+              
+              <Button 
+                variant={visualizationMode === 'trace' ? 'default' : 'outline'} 
+                size="sm"
+                onClick={() => setVisualizationMode('trace')}
+              >
+                Execution Trace
+              </Button>
+              
+              <Button 
+                variant={visualizationMode === 'graph' ? 'default' : 'outline'} 
+                size="sm"
+                onClick={() => setVisualizationMode('graph')}
+              >
+                Object Relationships
+              </Button>
+            </div>
+            
+            {visualizationMode === 'state' && currentState && (
+              <StateViewer 
+                variables={currentState.variables || []}
+                memoryUsage={memoryUsage}
+                executionTime={executionTime}
+              />
+            )}
+            
+            {visualizationMode === 'trace' && allStates.length > 0 && (
+              <ExecutionTraceVisualizer
+                executionStates={allStates}
+                currentStateIndex={currentStateIndex}
+                onStateSelect={handleSelectExecutionState}
+              />
+            )}
+            
+            {visualizationMode === 'graph' && currentState && (
+              <ObjectRelationshipView executionState={currentState} />
+            )}
             
             <Dialog>
               <DialogTrigger asChild>
@@ -583,7 +691,7 @@ const Index = () => {
                   Export Debugging Data
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-xl">
                 <DialogHeader>
                   <DialogTitle>Export Debugging Session</DialogTitle>
                 </DialogHeader>

@@ -1,5 +1,7 @@
 
 import { ExecutionState, Variable, StackFrame, CheckpointData } from '@/types/debugger';
+import { analyzeObjectRelationships, generateGraphData } from './objectRelationshipAnalyzer';
+import { GraphData } from '@/types/graph';
 
 // For performance optimization with large datasets or complex algorithms
 const EXECUTION_THROTTLE_MS = 50;
@@ -69,6 +71,7 @@ export function executeCode(
     let currentScope = callStack[0];
     let lineIndex = 0;
     let isComplete = false;
+    let previousGraphData: GraphData | null = null;
 
     // For handling recursive functions with clean tracking
     const executionContext = {
@@ -130,23 +133,27 @@ export function executeCode(
             changed: name === varName && variableChanged
           }));
           
+          // Generate object relationship graph
+          const relationships = analyzeObjectRelationships(variableState);
+          const graphData = generateGraphData(relationships);
+          
           // Create execution state snapshot
-          states.push({
+          const newState: ExecutionState = {
             line: lineIndex + 1,
             variables: variableState,
             callStack: JSON.parse(JSON.stringify(callStack)),
             timestamp: new Date(),
-            memory: calculateMemoryUsage(currentScope.variables)
-          });
+            memory: calculateMemoryUsage(currentScope.variables),
+            objectGraph: graphData
+          };
+          
+          states.push(newState);
           
           // Notify listener of state change
-          onStateChange({
-            line: lineIndex + 1,
-            variables: variableState,
-            callStack: callStack,
-            timestamp: new Date(),
-            memory: calculateMemoryUsage(currentScope.variables)
-          });
+          onStateChange(newState);
+          
+          // Update previous graph data for comparison
+          previousGraphData = graphData;
         } catch (e) {
           console.error(`Execution error at line ${lineIndex + 1}:`, e);
         }
@@ -235,18 +242,23 @@ export function createCheckpoint(
     throw new Error('Cannot create checkpoint: Missing execution state or session ID');
   }
   
-  // Create a deep copy of the state to prevent reference issues
-  const stateCopy = JSON.parse(JSON.stringify(state));
-  
-  return {
-    id: `cp-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-    sessionId: sessionId,
-    lineNumber: state.line,
-    state: JSON.stringify(stateCopy),
-    timestamp: new Date(),
-    notes: notes || `Checkpoint at line ${state.line}`,
-    memorySnapshot: state.memory || 0
-  };
+  try {
+    // Create a deep copy of the state to prevent reference issues
+    const stateCopy = JSON.parse(JSON.stringify(state));
+    
+    return {
+      id: `cp-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      sessionId: sessionId,
+      lineNumber: state.line,
+      state: JSON.stringify(stateCopy),
+      timestamp: new Date(),
+      notes: notes || `Checkpoint at line ${state.line}`,
+      memorySnapshot: state.memory || 0
+    };
+  } catch (err) {
+    console.error('Error creating checkpoint:', err);
+    throw new Error('Failed to create checkpoint: ' + (err instanceof Error ? err.message : 'Unknown error'));
+  }
 }
 
 /**
