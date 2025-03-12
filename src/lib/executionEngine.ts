@@ -231,14 +231,21 @@ export function createCheckpoint(
   sessionId: string,
   notes?: string
 ): CheckpointData {
+  if (!state || !sessionId) {
+    throw new Error('Cannot create checkpoint: Missing execution state or session ID');
+  }
+  
+  // Create a deep copy of the state to prevent reference issues
+  const stateCopy = JSON.parse(JSON.stringify(state));
+  
   return {
     id: `cp-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     sessionId: sessionId,
     lineNumber: state.line,
-    state: JSON.stringify(state),
+    state: JSON.stringify(stateCopy),
     timestamp: new Date(),
     notes: notes || `Checkpoint at line ${state.line}`,
-    memorySnapshot: state.memory
+    memorySnapshot: state.memory || 0
   };
 }
 
@@ -249,6 +256,10 @@ export function restoreFromCheckpoint(
   checkpoint: CheckpointData
 ): ExecutionState {
   try {
+    if (!checkpoint || !checkpoint.state) {
+      throw new Error('Invalid checkpoint data');
+    }
+    
     const state = JSON.parse(checkpoint.state) as ExecutionState;
     return state;
   } catch (e) {

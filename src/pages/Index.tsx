@@ -7,7 +7,7 @@ import DebugChat from '@/components/DebugChat';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { useAuth } from '@/contexts/AuthContext';
 import { debuggerService, createExecutionStatisticsTable } from '@/lib/debuggerService';
 import { executeCode, createCheckpoint, restoreFromCheckpoint, analyzeCode } from '@/lib/executionEngine';
@@ -69,30 +69,41 @@ const Index = () => {
             lastAccessed: new Date()
           });
           
-          if (error) throw error;
-          if (data) {
+          if (error) {
+            console.warn('Session initialization warning:', error.message);
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Development mode: Using mock session ID');
+              setSessionId(`mock-session-${Date.now()}`);
+            } else {
+              throw error;
+            }
+          } else if (data) {
             setSessionId(data.id);
             
             const checkpointsResponse = await debuggerService.getCheckpoints(data.id);
             if (checkpointsResponse.data) {
               setCheckpoints(checkpointsResponse.data);
             }
-            
-            analyzeAndUpdateState();
           }
+          
+          analyzeAndUpdateState();
         } catch (err) {
           console.error('Failed to initialize session:', err);
           toast({
-            title: 'Session Error',
-            description: 'Failed to initialize debugging session',
-            variant: 'destructive',
+            title: 'Session Notice',
+            description: 'Running in local mode due to database connection issues.',
+            variant: 'default',
           });
+          
+          if (process.env.NODE_ENV === 'development') {
+            setSessionId(`mock-session-${Date.now()}`);
+          }
         }
       };
       
       initSession();
     }
-  }, [user, toast]);
+  }, [user, toast, code, language]);
   
   const analyzeAndUpdateState = useCallback(() => {
     try {
@@ -266,10 +277,55 @@ const Index = () => {
   };
   
   const handleCheckpoint = async () => {
-    if (!sessionId || !user || !currentState) {
+    if (!currentState) {
       toast({
         title: 'Checkpoint Error',
-        description: 'Unable to create checkpoint: missing session or execution state',
+        description: 'Unable to create checkpoint: No execution state available',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    if (!sessionId) {
+      if (process.env.NODE_ENV === 'development') {
+        const mockSessionId = `mock-session-${Date.now()}`;
+        setSessionId(mockSessionId);
+        toast({
+          title: 'Development Mode',
+          description: 'Using mock session for checkpoint creation',
+        });
+        
+        try {
+          setIsSessionSaving(true);
+          const checkpointData = createCheckpoint(currentState, mockSessionId, `Checkpoint at line ${currentLine}`);
+          
+          const newCheckpoint = {
+            ...checkpointData,
+            timestamp: new Date()
+          };
+          
+          setCheckpoints(prev => [...prev, newCheckpoint]);
+          
+          toast({
+            title: 'Checkpoint Created',
+            description: `Successfully saved checkpoint at line ${currentLine}`,
+          });
+          setIsSessionSaving(false);
+        } catch (err) {
+          console.error('Failed to create checkpoint:', err);
+          toast({
+            title: 'Checkpoint Error',
+            description: err instanceof Error ? err.message : 'Failed to save checkpoint',
+            variant: 'destructive',
+          });
+          setIsSessionSaving(false);
+        }
+        return;
+      }
+      
+      toast({
+        title: 'Checkpoint Error',
+        description: 'Unable to create checkpoint: No active session',
         variant: 'destructive',
       });
       return;
@@ -296,7 +352,7 @@ const Index = () => {
       console.error('Failed to create checkpoint:', err);
       toast({
         title: 'Checkpoint Error',
-        description: 'Failed to save checkpoint',
+        description: err instanceof Error ? err.message : 'Failed to save checkpoint',
         variant: 'destructive',
       });
       setIsSessionSaving(false);
@@ -333,7 +389,7 @@ const Index = () => {
       console.error('Failed to restore checkpoint:', err);
       toast({
         title: 'Restore Error',
-        description: 'Failed to restore execution state',
+        description: err instanceof Error ? err.message : 'Failed to restore execution state',
         variant: 'destructive',
       });
     }
