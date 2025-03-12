@@ -174,6 +174,7 @@ const GraphVisualizer: React.FC<GraphVisualizerProps> = ({
     // Drag functions
     function dragstarted(event: any, d: GraphNode) {
       if (!event.active) simulation.alphaTarget(0.3).restart();
+      // TypeScript now knows these properties can exist on GraphNode
       d.fx = d.x;
       d.fy = d.y;
     }

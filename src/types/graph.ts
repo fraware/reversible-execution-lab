@@ -1,4 +1,3 @@
-
 import { Variable } from './debugger';
 
 export interface GraphNode {
@@ -11,6 +10,15 @@ export interface GraphNode {
     size?: number;
     changed?: boolean;
   };
+  // D3 force simulation properties
+  x?: number;
+  y?: number;
+  fx?: number | null;
+  fy?: number | null;
+  // Additional properties that D3 might add
+  vx?: number;
+  vy?: number;
+  index?: number;
 }
 
 export interface GraphEdge {
