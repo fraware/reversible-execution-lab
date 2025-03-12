@@ -39,7 +39,7 @@ const Project: React.FC = () => {
               </Link>
             </Button>
             <Button size="lg" variant="outline" className="group">
-              <a href="https://github.com/yourusername/reversible-debugger" target="_blank" rel="noopener noreferrer" className="flex items-center">
+              <a href="https://github.com/fraware/reversible-execution-lab" target="_blank" rel="noopener noreferrer" className="flex items-center">
                 <Github className="mr-2" /> View on GitHub
               </a>
             </Button>
@@ -253,7 +253,7 @@ const Project: React.FC = () => {
                 <li>Help us test new features in development</li>
               </ul>
               <Button variant="outline" className="hover-scale">
-                <a href="https://github.com/yourusername/reversible-debugger" target="_blank" rel="noopener noreferrer" className="flex items-center">
+                <a href="https://github.com/fraware/reversible-execution-lab" target="_blank" rel="noopener noreferrer" className="flex items-center">
                   <Github className="mr-2" /> Visit Repository
                 </a>
               </Button>
@@ -331,7 +331,7 @@ const Project: React.FC = () => {
             </div>
             
             <div className="flex space-x-6">
-              <a href="https://github.com/yourusername/reversible-debugger" target="_blank" rel="noopener noreferrer" className="text-secondary-foreground/70 hover:text-secondary-foreground transition-colors">
+              <a href="https://github.com/fraware/reversible-execution-lab" target="_blank" rel="noopener noreferrer" className="text-secondary-foreground/70 hover:text-secondary-foreground transition-colors">
                 <Github size={24} />
               </a>
               <a href="#" className="text-secondary-foreground/70 hover:text-secondary-foreground transition-colors">
