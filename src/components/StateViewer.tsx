@@ -36,6 +36,7 @@ const StateViewer: React.FC<StateViewerProps> = ({
                   <th className="text-left p-2">Name</th>
                   <th className="text-left p-2">Value</th>
                   <th className="text-left p-2">Type</th>
+                  <th className="text-left p-2">Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -52,6 +53,13 @@ const StateViewer: React.FC<StateViewerProps> = ({
                     </td>
                     <td className="p-2 text-xs text-gray-500">
                       {v.type || typeof v.value}
+                    </td>
+                    <td className="p-2">
+                      {v.changed && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                          Changed
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}

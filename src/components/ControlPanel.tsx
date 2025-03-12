@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
 import { 
   StepBack, 
   StepForward, 
@@ -11,7 +10,8 @@ import {
   Flag,
   FastForward,
   Download,
-  Camera
+  Camera,
+  Bookmark
 } from 'lucide-react';
 
 interface ControlPanelProps {
@@ -21,6 +21,7 @@ interface ControlPanelProps {
   onPause: () => void;
   onReset: () => void;
   onCheckpoint: () => void;
+  onJumpToCheckpoint?: () => void;
   isPlaying: boolean;
   onExport?: () => void;
   onScreenshot?: () => void;
@@ -34,6 +35,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
   onPause,
   onReset,
   onCheckpoint,
+  onJumpToCheckpoint,
   isPlaying,
   onExport,
   onScreenshot,
@@ -118,6 +120,18 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
       >
         <Flag className="h-4 w-4" />
       </Button>
+      
+      {onJumpToCheckpoint && (
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={onJumpToCheckpoint}
+          className="control-button"
+          title="Jump to Checkpoint"
+        >
+          <Bookmark className="h-4 w-4" />
+        </Button>
+      )}
       
       {onExport && (
         <Button

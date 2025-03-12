@@ -49,19 +49,18 @@ const Index = () => {
   const [isCodeAnalyzed, setIsCodeAnalyzed] = useState(false);
   const [isSessionSaving, setIsSessionSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("code");
+  const [showCheckpointsDialog, setShowCheckpointsDialog] = useState(false);
   
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Initialize or load a debugging session
   useEffect(() => {
     if (user) {
       const initSession = async () => {
-        // Create statistics table if needed
-        await createExecutionStatisticsTable();
-        
         try {
+          await createExecutionStatisticsTable();
+          
           const { data, error } = await debuggerService.saveSession({
             userId: user.id,
             code: code,
@@ -74,13 +73,11 @@ const Index = () => {
           if (data) {
             setSessionId(data.id);
             
-            // Load existing checkpoints
             const checkpointsResponse = await debuggerService.getCheckpoints(data.id);
             if (checkpointsResponse.data) {
               setCheckpoints(checkpointsResponse.data);
             }
             
-            // Initialize state with variables from code analysis
             analyzeAndUpdateState();
           }
         } catch (err) {
@@ -97,12 +94,10 @@ const Index = () => {
     }
   }, [user, toast]);
   
-  // Analyze code and update state
   const analyzeAndUpdateState = useCallback(() => {
     try {
       const { variables } = analyzeCode(code);
       
-      // Create initial variables state
       const initialVariables = variables.map(name => ({
         name,
         value: null,
@@ -110,7 +105,6 @@ const Index = () => {
         type: 'undefined'
       }));
       
-      // Set initial state
       setCurrentState({
         line: 1,
         variables: initialVariables,
@@ -131,12 +125,10 @@ const Index = () => {
     }
   }, [code]);
   
-  // Effect to analyze code whenever it changes
   useEffect(() => {
     analyzeAndUpdateState();
   }, [code, analyzeAndUpdateState]);
   
-  // Handle play/pause for code execution
   useEffect(() => {
     if (!isPlaying || !isCodeAnalyzed) return;
     
@@ -146,7 +138,6 @@ const Index = () => {
       const startTime = performance.now();
       let peakMemory = 0;
       
-      // Execute the code, tracking states
       const states = await executeCode(code, (state) => {
         setCurrentState(state);
         setCurrentLine(state.line);
@@ -159,17 +150,13 @@ const Index = () => {
       setAllStates(states);
       setIsPlaying(false);
       
-      // Save execution statistics
       if (sessionId) {
-        // Calculate statistics
         const variableChanges: Record<string, number> = {};
         const lineExecutionCount: Record<number, number> = {};
         
         states.forEach(state => {
-          // Count line executions
           lineExecutionCount[state.line] = (lineExecutionCount[state.line] || 0) + 1;
           
-          // Count variable changes
           state.variables.forEach(v => {
             if (v.changed) {
               variableChanges[v.name] = (variableChanges[v.name] || 0) + 1;
@@ -186,7 +173,6 @@ const Index = () => {
       }
     };
     
-    // Start execution
     runExecution();
     
     return () => {
@@ -197,7 +183,6 @@ const Index = () => {
   const handleStepBack = () => {
     if (allStates.length === 0) return;
     
-    // Find previous state
     const prevLineIndex = allStates.findIndex(state => state.line === currentLine) - 1;
     if (prevLineIndex >= 0) {
       setCurrentState(allStates[prevLineIndex]);
@@ -209,15 +194,31 @@ const Index = () => {
 
   const handleStepForward = () => {
     if (allStates.length === 0) {
-      // Execute just one step
       executeCode(code, (state) => {
-        setCurrentState(state);
+        const prevVariables = currentState?.variables || [];
+        const newVariables = state.variables.map(v => {
+          const prevVar = prevVariables.find(pv => pv.name === v.name);
+          const hasChanged = prevVar ? 
+            JSON.stringify(prevVar.value) !== JSON.stringify(v.value) : 
+            v.value !== null;
+          
+          return {
+            ...v,
+            changed: hasChanged
+          };
+        });
+        
+        const updatedState = {
+          ...state,
+          variables: newVariables
+        };
+        
+        setCurrentState(updatedState);
         setCurrentLine(state.line);
         setMemoryUsage(state.memory || 0);
       }, currentLine + 1).then(states => {
         setAllStates(prevStates => {
           const newStates = [...prevStates];
-          // Avoid duplicates
           states.forEach(state => {
             if (!newStates.some(s => s.line === state.line)) {
               newStates.push(state);
@@ -227,11 +228,30 @@ const Index = () => {
         });
       });
     } else {
-      // Use existing states
       const nextLineIndex = allStates.findIndex(state => state.line === currentLine) + 1;
       if (nextLineIndex < allStates.length) {
-        setCurrentState(allStates[nextLineIndex]);
-        setCurrentLine(allStates[nextLineIndex].line);
+        const nextState = allStates[nextLineIndex];
+        const currentVars = currentState?.variables || [];
+        
+        const updatedVars = nextState.variables.map(v => {
+          const currentVar = currentVars.find(cv => cv.name === v.name);
+          const hasChanged = currentVar ? 
+            JSON.stringify(currentVar.value) !== JSON.stringify(v.value) : 
+            v.value !== null;
+          
+          return {
+            ...v,
+            changed: hasChanged
+          };
+        });
+        
+        const updatedState = {
+          ...nextState,
+          variables: updatedVars
+        };
+        
+        setCurrentState(updatedState);
+        setCurrentLine(nextState.line);
       }
     }
   };
@@ -246,7 +266,14 @@ const Index = () => {
   };
   
   const handleCheckpoint = async () => {
-    if (!sessionId || !user || !currentState) return;
+    if (!sessionId || !user || !currentState) {
+      toast({
+        title: 'Checkpoint Error',
+        description: 'Unable to create checkpoint: missing session or execution state',
+        variant: 'destructive',
+      });
+      return;
+    }
     
     try {
       setIsSessionSaving(true);
@@ -279,8 +306,24 @@ const Index = () => {
   const handleRestoreCheckpoint = (checkpoint: CheckpointData) => {
     try {
       const state = restoreFromCheckpoint(checkpoint);
+      
+      if (currentState) {
+        const updatedVars = state.variables.map(v => {
+          const currentVar = currentState.variables.find(cv => cv.name === v.name);
+          return {
+            ...v,
+            changed: currentVar ? 
+              JSON.stringify(currentVar.value) !== JSON.stringify(v.value) : 
+              false
+          };
+        });
+        
+        state.variables = updatedVars;
+      }
+      
       setCurrentState(state);
       setCurrentLine(state.line);
+      setShowCheckpointsDialog(false);
       
       toast({
         title: 'Checkpoint Restored',
@@ -299,7 +342,6 @@ const Index = () => {
   const handleSwitchLanguage = (newLanguage: string) => {
     setLanguage(newLanguage);
     
-    // Set appropriate sample code
     if (newLanguage === 'python') {
       setCode(samplePythonCode);
     } else if (newLanguage === 'javascript') {
@@ -429,6 +471,7 @@ const Index = () => {
               onPause={handlePause}
               onReset={handleReset}
               onCheckpoint={handleCheckpoint}
+              onJumpToCheckpoint={handleJumpToCheckpoint}
               isPlaying={isPlaying}
             />
             
@@ -515,11 +558,44 @@ const Index = () => {
                 </div>
               </DialogContent>
             </Dialog>
+            
+            <Dialog open={showCheckpointsDialog} onOpenChange={setShowCheckpointsDialog}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Jump to Checkpoint</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 max-h-[300px] overflow-auto">
+                  {checkpoints.length > 0 ? (
+                    checkpoints.map((cp) => (
+                      <Button 
+                        key={cp.id}
+                        variant="outline"
+                        className="w-full justify-start text-left"
+                        onClick={() => handleRestoreCheckpoint(cp)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Bookmark size={16} />
+                          <div>
+                            <div>Line {cp.lineNumber}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {new Date(cp.timestamp).toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      </Button>
+                    ))
+                  ) : (
+                    <div className="text-center py-4 text-muted-foreground">
+                      No checkpoints available
+                    </div>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </div>
       
-      {/* Add the debug chat component */}
       <DebugChat 
         code={code}
         variables={currentState?.variables || []}

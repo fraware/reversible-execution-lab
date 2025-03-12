@@ -110,6 +110,7 @@ export const debuggerService = {
     const { data, error } = await supabase
       .from('checkpoints')
       .upsert({
+        id: checkpoint.id,
         session_id: checkpoint.sessionId,
         line_number: checkpoint.lineNumber,
         variables: checkpoint.state || '{}',
@@ -167,6 +168,34 @@ export const debuggerService = {
     sessionId: string, 
     stats: ExecutionStatistics
   ) {
+    // First, check if the table exists
+    const { error: checkError } = await supabase.from('execution_statistics').select('session_id').limit(1);
+    
+    // If table doesn't exist, create it by using SQL directly
+    if (checkError) {
+      console.log("Attempting to create execution_statistics table");
+      const { error: createError } = await supabase.rpc('execute_sql', {
+        sql_query: `
+          CREATE TABLE IF NOT EXISTS public.execution_statistics (
+            id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
+            session_id uuid REFERENCES public.debugging_sessions(id) ON DELETE CASCADE,
+            total_execution_time float8 NOT NULL,
+            peak_memory_usage int8 NOT NULL,
+            variable_changes jsonb NOT NULL DEFAULT '{}'::jsonb,
+            line_execution_count jsonb NOT NULL DEFAULT '{}'::jsonb,
+            created_at timestamp with time zone DEFAULT now() NOT NULL,
+            UNIQUE(session_id)
+          );
+        `
+      });
+      
+      if (createError) {
+        console.error("Failed to create execution_statistics table:", createError);
+        return { error: createError };
+      }
+    }
+    
+    // Now insert/update the statistics
     return await supabase
       .from('execution_statistics')
       .upsert({
@@ -237,14 +266,36 @@ export const debuggerService = {
   }
 };
 
-// Add SQL to create the execution_statistics table
-// This would be run once during app initialization
+// Modified to check if table exists first before attempting to create it
 export async function createExecutionStatisticsTable() {
-  const { error } = await supabase.rpc('create_execution_statistics_table', {});
+  // Check if table exists first
+  const { error: checkError } = await supabase.from('execution_statistics').select('session_id').limit(1);
   
-  if (error) {
-    console.error('Error creating execution_statistics table:', error);
-    return false;
+  // Only create the table if it doesn't exist
+  if (checkError) {
+    console.log("Table execution_statistics doesn't exist, attempting to create");
+    
+    const { error } = await supabase.rpc('execute_sql', {
+      sql_query: `
+        CREATE TABLE IF NOT EXISTS public.execution_statistics (
+          id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
+          session_id uuid REFERENCES public.debugging_sessions(id) ON DELETE CASCADE,
+          total_execution_time float8 NOT NULL,
+          peak_memory_usage int8 NOT NULL,
+          variable_changes jsonb NOT NULL DEFAULT '{}'::jsonb,
+          line_execution_count jsonb NOT NULL DEFAULT '{}'::jsonb,
+          created_at timestamp with time zone DEFAULT now() NOT NULL,
+          UNIQUE(session_id)
+        );
+      `
+    });
+    
+    if (error) {
+      console.error("Error creating execution_statistics table:", error);
+      return false;
+    }
+    return true;
   }
-  return true;
+  
+  return true; // Table already exists
 }
