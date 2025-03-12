@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ControlPanel from '@/components/ControlPanel';
@@ -49,6 +48,7 @@ const Index = () => {
   const [executionTime, setExecutionTime] = useState<number>(0);
   const [isCodeAnalyzed, setIsCodeAnalyzed] = useState(false);
   const [isSessionSaving, setIsSessionSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState("code");
   
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -402,7 +402,7 @@ const Index = () => {
               </Button>
             </div>
             
-            <Tabs defaultValue="code">
+            <Tabs defaultValue="code" value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="w-full grid grid-cols-2">
                 <TabsTrigger value="code">Code Editor</TabsTrigger>
                 <TabsTrigger value="execution">Execution</TabsTrigger>
