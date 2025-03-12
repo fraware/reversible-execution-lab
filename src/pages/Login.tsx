@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import { checkSupabaseConnection } from '@/lib/supabase';
+import { ArrowLeft } from 'lucide-react';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -70,6 +71,13 @@ const Login: React.FC = () => {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted p-8">
       <Card className="w-full max-w-md animate-fade-in glass-panel">
         <CardHeader>
+          <div className="flex justify-between items-center mb-2">
+            <Button variant="ghost" size="sm" className="flex items-center gap-1" asChild>
+              <Link to="/project">
+                <ArrowLeft size={16} /> Back to Project
+              </Link>
+            </Button>
+          </div>
           <CardTitle className="text-2xl font-bold text-center">
             {isLogin ? 'Login' : 'Sign Up'} to Reversible Debugger
           </CardTitle>
@@ -125,7 +133,7 @@ const Login: React.FC = () => {
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex justify-center">
+        <CardFooter className="flex justify-center flex-col space-y-4">
           <Button
             variant="link"
             onClick={() => setIsLogin(!isLogin)}
