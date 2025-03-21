@@ -15,6 +15,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { debuggerService, createExecutionStatisticsTable } from '@/lib/debuggerService';
 import { executeCode, createCheckpoint, restoreFromCheckpoint, analyzeCode } from '@/lib/executionEngine';
 import { ExecutionState, CheckpointData, Variable } from '@/types/debugger';
+import { parseQuantumCode, sampleQuantumCodes } from '@/lib/quantumCodeParser';
+import { QuantumCircuit } from '@/types/quantum';
 import { useToast } from '@/components/ui/use-toast';
 import { Code, Play, Pause, Save, FileDown, Bookmark, RotateCcw, Share2, Cpu } from 'lucide-react';
 
@@ -115,11 +117,16 @@ const Index = () => {
   const [memoryUsage, setMemoryUsage] = useState<number>(0);
   const [executionTime, setExecutionTime] = useState<number>(0);
   const [isCodeAnalyzed, setIsCodeAnalyzed] = useState(false);
-  const [isSessionSaving, setIsSessionSaving] = useState(false);
+  const [isSessionSaving, setIsSessionSaving] = useState(isSessionSaving);
   const [activeTab, setActiveTab] = useState("code");
   const [showCheckpointsDialog, setShowCheckpointsDialog] = useState(false);
   const [visualizationMode, setVisualizationMode] = useState<'state' | 'trace' | 'graph' | 'quantum'>('state');
   const [currentQuantumCircuit, setCurrentQuantumCircuit] = useState<string>('bell');
+
+  // Add new state variables for quantum debugging
+  const [quantumCode, setQuantumCode] = useState<string>(sampleQuantumCodes.bell);
+  const [quantumCircuit, setQuantumCircuit] = useState<QuantumCircuit | null>(null);
+  const [isQuantumMode, setIsQuantumMode] = useState<boolean>(false);
   
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -546,6 +553,50 @@ const Index = () => {
     }
   };
 
+  // Add new functions for quantum debugging
+  const handleUpdateQuantumCircuit = useCallback(() => {
+    try {
+      const parsedCircuit = parseQuantumCode(quantumCode);
+      if (parsedCircuit) {
+        setQuantumCircuit(parsedCircuit);
+      } else {
+        toast({
+          title: 'Parsing Error',
+          description: 'Failed to parse quantum code',
+          variant: 'destructive',
+        });
+      }
+    } catch (err) {
+      console.error('Failed to parse quantum code:', err);
+      toast({
+        title: 'Parsing Error',
+        description: err instanceof Error ? err.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    }
+  }, [quantumCode, toast]);
+
+  // Parse quantum code when it changes
+  useEffect(() => {
+    handleUpdateQuantumCircuit();
+  }, [quantumCode, handleUpdateQuantumCircuit]);
+
+  // Toggle quantum mode
+  const handleToggleQuantumMode = () => {
+    setIsQuantumMode(!isQuantumMode);
+    if (!isQuantumMode) {
+      // Entering quantum mode
+      setActiveTab("code");
+      setVisualizationMode('quantum');
+    }
+  };
+
+  // Load sample quantum code
+  const handleLoadSampleQuantumCode = (sampleName: keyof typeof sampleQuantumCodes) => {
+    setQuantumCode(sampleQuantumCodes[sampleName]);
+    handleUpdateQuantumCircuit();
+  };
+
   const handleLogout = async () => {
     await signOut();
     navigate('/login');
@@ -583,9 +634,12 @@ const Index = () => {
           <div className="space-y-4">
             <div className="flex flex-wrap gap-2 mb-4">
               <Button 
-                variant={language === 'python' ? 'default' : 'outline'} 
+                variant={language === 'python' && !isQuantumMode ? 'default' : 'outline'} 
                 size="sm"
-                onClick={() => handleSwitchLanguage('python')}
+                onClick={() => {
+                  setIsQuantumMode(false);
+                  handleSwitchLanguage('python');
+                }}
                 className="flex items-center gap-1"
               >
                 <Code size={16} />
@@ -593,9 +647,12 @@ const Index = () => {
               </Button>
               
               <Button 
-                variant={language === 'javascript' ? 'default' : 'outline'} 
+                variant={language === 'javascript' && !isQuantumMode ? 'default' : 'outline'} 
                 size="sm"
-                onClick={() => handleSwitchLanguage('javascript')}
+                onClick={() => {
+                  setIsQuantumMode(false);
+                  handleSwitchLanguage('javascript');
+                }}
                 className="flex items-center gap-1"
               >
                 <Code size={16} />
@@ -603,24 +660,57 @@ const Index = () => {
               </Button>
               
               <Button
-                variant="outline"
+                variant={!isQuantumMode ? 'outline' : 'default'}
                 size="sm"
-                onClick={() => setCode(sampleDataStructureCode)}
-                className="flex items-center gap-1"
-              >
-                <Share2 size={16} />
-                Use Data Structure Example
-              </Button>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setVisualizationMode('quantum')}
+                onClick={handleToggleQuantumMode}
                 className="flex items-center gap-1"
               >
                 <Cpu size={16} />
                 Quantum Mode
               </Button>
+              
+              {!isQuantumMode && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCode(sampleDataStructureCode)}
+                  className="flex items-center gap-1"
+                >
+                  <Share2 size={16} />
+                  Use Data Structure Example
+                </Button>
+              )}
+              
+              {isQuantumMode && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleLoadSampleQuantumCode('bell')}
+                    className="flex items-center gap-1"
+                  >
+                    Bell State
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleLoadSampleQuantumCode('teleportation')}
+                    className="flex items-center gap-1"
+                  >
+                    Teleportation
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleLoadSampleQuantumCode('grover')}
+                    className="flex items-center gap-1"
+                  >
+                    Grover's
+                  </Button>
+                </>
+              )}
             </div>
             
             <Tabs defaultValue="code" value={activeTab} onValueChange={setActiveTab}>
@@ -630,52 +720,80 @@ const Index = () => {
               </TabsList>
               
               <TabsContent value="code" className="mt-2">
-                <Textarea
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  className="font-mono text-sm h-[400px] resize-none"
-                  placeholder="Enter your code here..."
-                />
+                {isQuantumMode ? (
+                  <Textarea
+                    value={quantumCode}
+                    onChange={(e) => setQuantumCode(e.target.value)}
+                    className="font-mono text-sm h-[400px] resize-none"
+                    placeholder="Enter your quantum code here..."
+                  />
+                ) : (
+                  <Textarea
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    className="font-mono text-sm h-[400px] resize-none"
+                    placeholder="Enter your code here..."
+                  />
+                )}
               </TabsContent>
               
               <TabsContent value="execution" className="mt-2">
-                <CodeViewer 
-                  code={code} 
-                  currentLine={currentLine}
-                  heatmap={allStates.reduce((acc, state) => {
-                    acc[state.line] = (acc[state.line] || 0) + 1;
-                    return acc;
-                  }, {} as Record<number, number>)}
-                />
+                {isQuantumMode ? (
+                  <div className="font-mono text-sm h-[400px] overflow-auto border p-4 rounded-md">
+                    <h3 className="text-lg font-medium mb-2">Quantum Circuit Execution</h3>
+                    <pre className="text-xs">
+                      {quantumCircuit ? (
+                        <>
+                          <p>Circuit: {quantumCircuit.name}</p>
+                          <p>Qubits: {quantumCircuit.qubits}</p>
+                          <p>Gates: {quantumCircuit.gates.length}</p>
+                        </>
+                      ) : (
+                        'No valid quantum circuit'
+                      )}
+                    </pre>
+                  </div>
+                ) : (
+                  <CodeViewer 
+                    code={code} 
+                    currentLine={currentLine}
+                    heatmap={allStates.reduce((acc, state) => {
+                      acc[state.line] = (acc[state.line] || 0) + 1;
+                      return acc;
+                    }, {} as Record<number, number>)}
+                  />
+                )}
               </TabsContent>
             </Tabs>
             
             <ControlPanel
-              onStepBack={handleStepBack}
-              onStepForward={handleStepForward}
-              onPlay={handlePlay}
-              onPause={handlePause}
-              onReset={handleReset}
-              onCheckpoint={handleCheckpoint}
-              onJumpToCheckpoint={handleJumpToCheckpoint}
+              onStepBack={isQuantumMode ? handleUpdateQuantumCircuit : handleStepBack}
+              onStepForward={isQuantumMode ? handleUpdateQuantumCircuit : handleStepForward}
+              onPlay={isQuantumMode ? handleUpdateQuantumCircuit : handlePlay}
+              onPause={isQuantumMode ? handleUpdateQuantumCircuit : handlePause}
+              onReset={isQuantumMode ? handleUpdateQuantumCircuit : handleReset}
+              onCheckpoint={isQuantumMode ? handleUpdateQuantumCircuit : handleCheckpoint}
+              onJumpToCheckpoint={isQuantumMode ? handleUpdateQuantumCircuit : handleJumpToCheckpoint}
               isPlaying={isPlaying}
             />
             
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Execution Speed</span>
-              <input
-                type="range"
-                min="100"
-                max="1000"
-                step="100"
-                value={executionSpeed}
-                onChange={(e) => setExecutionSpeed(parseInt(e.target.value))}
-                className="w-1/2"
-              />
-              <span className="text-sm">{executionSpeed}ms</span>
-            </div>
+            {!isQuantumMode && (
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Execution Speed</span>
+                <input
+                  type="range"
+                  min="100"
+                  max="1000"
+                  step="100"
+                  value={executionSpeed}
+                  onChange={(e) => setExecutionSpeed(parseInt(e.target.value))}
+                  className="w-1/2"
+                />
+                <span className="text-sm">{executionSpeed}ms</span>
+              </div>
+            )}
             
-            {checkpoints.length > 0 && (
+            {!isQuantumMode && checkpoints.length > 0 && (
               <div className="glass-panel rounded-lg p-4 animate-fade-in">
                 <h3 className="text-lg font-semibold mb-2">Checkpoints</h3>
                 <div className="flex flex-wrap gap-2">
@@ -698,29 +816,33 @@ const Index = () => {
           
           <div className="space-y-4">
             <div className="flex flex-wrap gap-2 mb-4">
-              <Button 
-                variant={visualizationMode === 'state' ? 'default' : 'outline'} 
-                size="sm"
-                onClick={() => setVisualizationMode('state')}
-              >
-                Variable State
-              </Button>
-              
-              <Button 
-                variant={visualizationMode === 'trace' ? 'default' : 'outline'} 
-                size="sm"
-                onClick={() => setVisualizationMode('trace')}
-              >
-                Execution Trace
-              </Button>
-              
-              <Button 
-                variant={visualizationMode === 'graph' ? 'default' : 'outline'} 
-                size="sm"
-                onClick={() => setVisualizationMode('graph')}
-              >
-                Object Relationships
-              </Button>
+              {!isQuantumMode && (
+                <>
+                  <Button 
+                    variant={visualizationMode === 'state' ? 'default' : 'outline'} 
+                    size="sm"
+                    onClick={() => setVisualizationMode('state')}
+                  >
+                    Variable State
+                  </Button>
+                  
+                  <Button 
+                    variant={visualizationMode === 'trace' ? 'default' : 'outline'} 
+                    size="sm"
+                    onClick={() => setVisualizationMode('trace')}
+                  >
+                    Execution Trace
+                  </Button>
+                  
+                  <Button 
+                    variant={visualizationMode === 'graph' ? 'default' : 'outline'} 
+                    size="sm"
+                    onClick={() => setVisualizationMode('graph')}
+                  >
+                    Object Relationships
+                  </Button>
+                </>
+              )}
               
               <Button 
                 variant={visualizationMode === 'quantum' ? 'default' : 'outline'} 
@@ -731,7 +853,7 @@ const Index = () => {
               </Button>
             </div>
             
-            {visualizationMode === 'state' && currentState && (
+            {!isQuantumMode && visualizationMode === 'state' && currentState && (
               <StateViewer 
                 variables={currentState.variables || []}
                 memoryUsage={memoryUsage}
@@ -739,7 +861,7 @@ const Index = () => {
               />
             )}
             
-            {visualizationMode === 'trace' && allStates.length > 0 && (
+            {!isQuantumMode && visualizationMode === 'trace' && allStates.length > 0 && (
               <ExecutionTraceVisualizer
                 executionStates={allStates}
                 currentStateIndex={currentStateIndex}
@@ -747,7 +869,7 @@ const Index = () => {
               />
             )}
             
-            {visualizationMode === 'graph' && currentState && (
+            {!isQuantumMode && visualizationMode === 'graph' && currentState && (
               <ObjectRelationshipView executionState={currentState} />
             )}
             
@@ -755,26 +877,46 @@ const Index = () => {
               <div className="glass-panel rounded-lg p-4 h-[400px] overflow-auto">
                 <h2 className="text-xl font-semibold mb-4">Quantum Circuit Visualization</h2>
                 
-                <Tabs defaultValue={currentQuantumCircuit} onValueChange={setCurrentQuantumCircuit}>
-                  <TabsList className="w-full max-w-md mx-auto grid grid-cols-3 mb-4">
-                    <TabsTrigger value="bell">Bell State</TabsTrigger>
-                    <TabsTrigger value="teleportation">Teleportation</TabsTrigger>
-                    <TabsTrigger value="grover">Grover's</TabsTrigger>
-                  </TabsList>
-                  
-                  <div className="mt-2">
-                    <QuantumCircuitVisualizer 
-                      circuit={sampleQuantumCircuits[currentQuantumCircuit as keyof typeof sampleQuantumCircuits]} 
-                      className="h-[200px] mb-4"
-                    />
-                    <p className="text-sm text-muted-foreground">
-                      {sampleQuantumCircuits[currentQuantumCircuit as keyof typeof sampleQuantumCircuits].description}
-                      {currentQuantumCircuit === 'bell' && ' This demonstrates quantum entanglement, a fundamental concept in quantum computing.'}
-                      {currentQuantumCircuit === 'teleportation' && ' Quantum teleportation enables moving quantum information between distant qubits.'}
-                      {currentQuantumCircuit === 'grover' && ' Grover\'s algorithm provides a quadratic speedup for searching unstructured databases.'}
-                    </p>
+                {isQuantumMode ? (
+                  <div className="space-y-4">
+                    {quantumCircuit ? (
+                      <>
+                        <QuantumCircuitVisualizer 
+                          circuit={quantumCircuit} 
+                          className="h-[200px] mb-4"
+                        />
+                        <p className="text-sm text-muted-foreground">
+                          {quantumCircuit.description || 'No description provided for this circuit.'}
+                        </p>
+                      </>
+                    ) : (
+                      <div className="flex items-center justify-center h-[200px] border border-dashed rounded-lg">
+                        <p className="text-muted-foreground">Invalid quantum circuit code</p>
+                      </div>
+                    )}
                   </div>
-                </Tabs>
+                ) : (
+                  <Tabs defaultValue={currentQuantumCircuit} onValueChange={setCurrentQuantumCircuit}>
+                    <TabsList className="w-full max-w-md mx-auto grid grid-cols-3 mb-4">
+                      <TabsTrigger value="bell">Bell State</TabsTrigger>
+                      <TabsTrigger value="teleportation">Teleportation</TabsTrigger>
+                      <TabsTrigger value="grover">Grover's</TabsTrigger>
+                    </TabsList>
+                    
+                    <div className="mt-2">
+                      <QuantumCircuitVisualizer 
+                        circuit={sampleQuantumCircuits[currentQuantumCircuit as keyof typeof sampleQuantumCircuits]} 
+                        className="h-[200px] mb-4"
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        {sampleQuantumCircuits[currentQuantumCircuit as keyof typeof sampleQuantumCircuits].description}
+                        {currentQuantumCircuit === 'bell' && ' This demonstrates quantum entanglement, a fundamental concept in quantum computing.'}
+                        {currentQuantumCircuit === 'teleportation' && ' Quantum teleportation enables moving quantum information between distant qubits.'}
+                        {currentQuantumCircuit === 'grover' && ' Grover\'s algorithm provides a quadratic speedup for searching unstructured databases.'}
+                      </p>
+                    </div>
+                  </Tabs>
+                )}
               </div>
             )}
             
@@ -804,66 +946,3 @@ const Index = () => {
                         states: allStates.length > 0 ? 
                           allStates.slice(0, 5).map(s => ({
                             line: s.line,
-                            variables: s.variables.map(v => ({
-                              name: v.name, 
-                              value: v.value
-                            }))
-                          })) : []
-                      }, null, 2)}
-                    </pre>
-                  </div>
-                  <Button className="w-full">
-                    <FileDown size={16} className="mr-2" />
-                    Download Full Session
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-            
-            <Dialog open={showCheckpointsDialog} onOpenChange={setShowCheckpointsDialog}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Jump to Checkpoint</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 max-h-[300px] overflow-auto">
-                  {checkpoints.length > 0 ? (
-                    checkpoints.map((cp) => (
-                      <Button 
-                        key={cp.id}
-                        variant="outline"
-                        className="w-full justify-start text-left"
-                        onClick={() => handleRestoreCheckpoint(cp)}
-                      >
-                        <div className="flex items-center gap-2">
-                          <Bookmark size={16} />
-                          <div>
-                            <div>Line {cp.lineNumber}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {new Date(cp.timestamp).toLocaleString()}
-                            </div>
-                          </div>
-                        </div>
-                      </Button>
-                    ))
-                  ) : (
-                    <div className="text-center py-4 text-muted-foreground">
-                      No checkpoints available
-                    </div>
-                  )}
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
-      </div>
-      
-      <DebugChat 
-        code={code}
-        variables={currentState?.variables || []}
-        currentLine={currentLine}
-      />
-    </div>
-  );
-};
-
-export default Index;
