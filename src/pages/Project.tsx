@@ -1,9 +1,8 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, ArrowRight, Github, User, Cloud, Bot, Cpu, GraduationCap, Bookmark, Eye, ArrowLeftRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Github, User, Bot, Cpu, Bookmark, Eye, ArrowLeftRight } from 'lucide-react';
 
 const Project: React.FC = () => {
   return (
@@ -12,7 +11,6 @@ const Project: React.FC = () => {
       <section className="relative py-20 px-4 md:px-8 lg:px-16 flex flex-col items-center justify-center min-h-[90vh] overflow-hidden">
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1545670723-196ed0954986?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2952&q=80')] bg-cover bg-center opacity-5 z-0"></div>
         
-        {/* Animated code execution visualization in background */}
         <div className="absolute inset-0 z-0 opacity-10">
           <div className="animate-slide-up bg-primary/10 h-2 w-64 absolute top-1/4 left-1/3"></div>
           <div className="animate-slide-up bg-primary/10 h-2 w-48 absolute top-1/3 left-1/4 delay-300"></div>
@@ -135,44 +133,6 @@ const Project: React.FC = () => {
               </CardContent>
             </Card>
             
-            {/* Advanced Features */}
-            <Card className="hover-scale">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Cloud className="mr-2 text-primary" /> Supabase Integration
-                </CardTitle>
-                <CardDescription>Cloud sync and storage for your debugging sessions</CardDescription>
-              </CardHeader>
-              <CardContent>
-                Save debugging sessions, share with team members, and access your work from anywhere with our Supabase backend.
-              </CardContent>
-            </Card>
-            
-            <Card className="hover-scale">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Github className="mr-2 text-primary" /> GitHub Sync
-                </CardTitle>
-                <CardDescription>Two-way editing with GitHub repositories</CardDescription>
-              </CardHeader>
-              <CardContent>
-                Seamlessly integrate with GitHub repositories for version control and collaborative debugging sessions.
-              </CardContent>
-            </Card>
-            
-            <Card className="hover-scale">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Bot className="mr-2 text-primary" /> AI Chat Debugging
-                </CardTitle>
-                <CardDescription>Get AI-powered assistance while debugging</CardDescription>
-              </CardHeader>
-              <CardContent>
-                Our experimental AI chat mode helps identify issues and suggests fixes as you debug, accelerating problem resolution.
-              </CardContent>
-            </Card>
-            
-            {/* Specialized Features */}
             <Card className="hover-scale">
               <CardHeader>
                 <CardTitle className="flex items-center">
@@ -188,24 +148,24 @@ const Project: React.FC = () => {
             <Card className="hover-scale">
               <CardHeader>
                 <CardTitle className="flex items-center">
-                  <GraduationCap className="mr-2 text-primary" /> Educational Mode
-                </CardTitle>
-                <CardDescription>Perfect for learning and teaching</CardDescription>
-              </CardHeader>
-              <CardContent>
-                A simplified interface with explanatory prompts and built-in exercises, ideal for educational environments.
-              </CardContent>
-            </Card>
-            
-            <Card className="hover-scale">
-              <CardHeader>
-                <CardTitle className="flex items-center">
                   <User className="mr-2 text-primary" /> User-Friendly Interface
                 </CardTitle>
                 <CardDescription>Intuitive design for all skill levels</CardDescription>
               </CardHeader>
               <CardContent>
                 A clean, modern interface that makes reversible debugging accessible to developers at any experience level.
+              </CardContent>
+            </Card>
+            
+            <Card className="hover-scale">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Bot className="mr-2 text-primary" /> AI Chat Debugging
+                </CardTitle>
+                <CardDescription>Get AI-powered assistance while debugging</CardDescription>
+              </CardHeader>
+              <CardContent>
+                Our experimental AI chat mode helps identify issues and suggests fixes as you debug, accelerating problem resolution.
               </CardContent>
             </Card>
           </div>
