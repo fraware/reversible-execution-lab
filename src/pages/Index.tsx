@@ -118,7 +118,7 @@ const Index = () => {
   const [memoryUsage, setMemoryUsage] = useState<number>(0);
   const [executionTime, setExecutionTime] = useState<number>(0);
   const [isCodeAnalyzed, setIsCodeAnalyzed] = useState(false);
-  const [isSessionSaving, setIsSessionSaving] = useState(isSessionSaving);
+  const [isSessionSaving, setIsSessionSaving] = useState(false); // Fixed: Initialize with a boolean value instead of using the variable itself
   const [activeTab, setActiveTab] = useState("code");
   const [showCheckpointsDialog, setShowCheckpointsDialog] = useState(false);
   const [visualizationMode, setVisualizationMode] = useState<'state' | 'trace' | 'graph' | 'quantum'>('state');
