@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ControlPanel from '@/components/ControlPanel';
@@ -7,6 +6,7 @@ import StateViewer from '@/components/StateViewer';
 import DebugChat from '@/components/DebugChat';
 import ExecutionTraceVisualizer from '@/components/ExecutionTraceVisualizer';
 import ObjectRelationshipView from '@/components/ObjectRelationshipView';
+import QuantumCircuitVisualizer from '@/components/QuantumCircuitVisualizer';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,7 +16,7 @@ import { debuggerService, createExecutionStatisticsTable } from '@/lib/debuggerS
 import { executeCode, createCheckpoint, restoreFromCheckpoint, analyzeCode } from '@/lib/executionEngine';
 import { ExecutionState, CheckpointData, Variable } from '@/types/debugger';
 import { useToast } from '@/components/ui/use-toast';
-import { Code, Play, Pause, Save, FileDown, Bookmark, RotateCcw, Share2 } from 'lucide-react';
+import { Code, Play, Pause, Save, FileDown, Bookmark, RotateCcw, Share2, Cpu } from 'lucide-react';
 
 const samplePythonCode = `def fibonacci(n):
     if n <= 1:
@@ -54,6 +54,53 @@ while (current !== null) {
   current = current.next;
 }`;
 
+const sampleQuantumCircuits = {
+  bell: {
+    name: 'Bell State',
+    description: 'Creates a maximally entangled state |00⟩ + |11⟩',
+    qubits: 2,
+    gates: [
+      { type: 'H' as const, position: 1, control: 0 },
+      { type: 'CNOT' as const, position: 2, control: 0, target: 1 }
+    ]
+  },
+  teleportation: {
+    name: 'Quantum Teleportation',
+    description: 'Protocol to transfer quantum state using entanglement',
+    qubits: 3,
+    gates: [
+      { type: 'H' as const, position: 1, control: 1 },
+      { type: 'CNOT' as const, position: 2, control: 1, target: 2 },
+      { type: 'CNOT' as const, position: 3, control: 0, target: 1 },
+      { type: 'H' as const, position: 4, control: 0 },
+      { type: 'X' as const, position: 5, control: 1 },
+      { type: 'Z' as const, position: 5, control: 0 }
+    ]
+  },
+  grover: {
+    name: 'Grover\'s Algorithm',
+    description: 'Quantum search algorithm for unstructured databases',
+    qubits: 3,
+    gates: [
+      { type: 'H' as const, position: 1, control: 0 },
+      { type: 'H' as const, position: 1, control: 1 },
+      { type: 'H' as const, position: 1, control: 2 },
+      { type: 'X' as const, position: 2, control: 0 },
+      { type: 'X' as const, position: 2, control: 1 },
+      { type: 'X' as const, position: 2, control: 2 },
+      { type: 'H' as const, position: 3, control: 2 },
+      { type: 'CNOT' as const, position: 4, control: 0, target: 2 },
+      { type: 'H' as const, position: 5, control: 2 },
+      { type: 'X' as const, position: 6, control: 0 },
+      { type: 'X' as const, position: 6, control: 1 },
+      { type: 'X' as const, position: 6, control: 2 },
+      { type: 'H' as const, position: 7, control: 0 },
+      { type: 'H' as const, position: 7, control: 1 },
+      { type: 'H' as const, position: 7, control: 2 }
+    ]
+  }
+};
+
 const Index = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentLine, setCurrentLine] = useState(1);
@@ -71,7 +118,8 @@ const Index = () => {
   const [isSessionSaving, setIsSessionSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("code");
   const [showCheckpointsDialog, setShowCheckpointsDialog] = useState(false);
-  const [visualizationMode, setVisualizationMode] = useState<'state' | 'trace' | 'graph'>('state');
+  const [visualizationMode, setVisualizationMode] = useState<'state' | 'trace' | 'graph' | 'quantum'>('state');
+  const [currentQuantumCircuit, setCurrentQuantumCircuit] = useState<string>('bell');
   
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -563,6 +611,16 @@ const Index = () => {
                 <Share2 size={16} />
                 Use Data Structure Example
               </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setVisualizationMode('quantum')}
+                className="flex items-center gap-1"
+              >
+                <Cpu size={16} />
+                Quantum Mode
+              </Button>
             </div>
             
             <Tabs defaultValue="code" value={activeTab} onValueChange={setActiveTab}>
@@ -663,6 +721,14 @@ const Index = () => {
               >
                 Object Relationships
               </Button>
+              
+              <Button 
+                variant={visualizationMode === 'quantum' ? 'default' : 'outline'} 
+                size="sm"
+                onClick={() => setVisualizationMode('quantum')}
+              >
+                Quantum Circuits
+              </Button>
             </div>
             
             {visualizationMode === 'state' && currentState && (
@@ -683,6 +749,33 @@ const Index = () => {
             
             {visualizationMode === 'graph' && currentState && (
               <ObjectRelationshipView executionState={currentState} />
+            )}
+            
+            {visualizationMode === 'quantum' && (
+              <div className="glass-panel rounded-lg p-4 h-[400px] overflow-auto">
+                <h2 className="text-xl font-semibold mb-4">Quantum Circuit Visualization</h2>
+                
+                <Tabs defaultValue={currentQuantumCircuit} onValueChange={setCurrentQuantumCircuit}>
+                  <TabsList className="w-full max-w-md mx-auto grid grid-cols-3 mb-4">
+                    <TabsTrigger value="bell">Bell State</TabsTrigger>
+                    <TabsTrigger value="teleportation">Teleportation</TabsTrigger>
+                    <TabsTrigger value="grover">Grover's</TabsTrigger>
+                  </TabsList>
+                  
+                  <div className="mt-2">
+                    <QuantumCircuitVisualizer 
+                      circuit={sampleQuantumCircuits[currentQuantumCircuit as keyof typeof sampleQuantumCircuits]} 
+                      className="h-[200px] mb-4"
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      {sampleQuantumCircuits[currentQuantumCircuit as keyof typeof sampleQuantumCircuits].description}
+                      {currentQuantumCircuit === 'bell' && ' This demonstrates quantum entanglement, a fundamental concept in quantum computing.'}
+                      {currentQuantumCircuit === 'teleportation' && ' Quantum teleportation enables moving quantum information between distant qubits.'}
+                      {currentQuantumCircuit === 'grover' && ' Grover\'s algorithm provides a quadratic speedup for searching unstructured databases.'}
+                    </p>
+                  </div>
+                </Tabs>
+              </div>
             )}
             
             <Dialog>
