@@ -26,6 +26,7 @@ interface ControlPanelProps {
   onExport?: () => void;
   onScreenshot?: () => void;
   onFastForward?: () => void;
+  isDisabled?: boolean;
 }
 
 const ControlPanel: React.FC<ControlPanelProps> = ({
@@ -39,7 +40,8 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
   isPlaying,
   onExport,
   onScreenshot,
-  onFastForward
+  onFastForward,
+  isDisabled = false
 }) => {
   return (
     <div className="glass-panel p-4 rounded-lg flex flex-wrap items-center gap-2 animate-slide-up">
@@ -50,6 +52,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
           onClick={onStepBack}
           className="control-button"
           title="Step Backward"
+          disabled={isDisabled}
         >
           <StepBack className="h-4 w-4" />
         </Button>
@@ -61,6 +64,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
             onClick={onPause}
             className="control-button"
             title="Pause Execution"
+            disabled={isDisabled}
           >
             <Pause className="h-4 w-4" />
           </Button>
@@ -71,6 +75,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
             onClick={onPlay}
             className="control-button"
             title="Start Execution"
+            disabled={isDisabled}
           >
             <Play className="h-4 w-4" />
           </Button>
@@ -82,6 +87,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
           onClick={onStepForward}
           className="control-button"
           title="Step Forward"
+          disabled={isDisabled}
         >
           <StepForward className="h-4 w-4" />
         </Button>
@@ -93,6 +99,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
             onClick={onFastForward}
             className="control-button"
             title="Fast Forward to Next Checkpoint"
+            disabled={isDisabled}
           >
             <FastForward className="h-4 w-4" />
           </Button>
@@ -107,6 +114,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
         onClick={onReset}
         className="control-button"
         title="Reset Execution"
+        disabled={isDisabled}
       >
         <RotateCcw className="h-4 w-4" />
       </Button>
@@ -117,6 +125,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
         onClick={onCheckpoint}
         className="control-button"
         title="Create Checkpoint"
+        disabled={isDisabled}
       >
         <Flag className="h-4 w-4" />
       </Button>
@@ -128,6 +137,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
           onClick={onJumpToCheckpoint}
           className="control-button"
           title="Jump to Checkpoint"
+          disabled={isDisabled}
         >
           <Bookmark className="h-4 w-4" />
         </Button>
@@ -140,6 +150,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
           onClick={onExport}
           className="control-button"
           title="Export Debugging Data"
+          disabled={isDisabled}
         >
           <Download className="h-4 w-4" />
         </Button>
@@ -152,6 +163,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
           onClick={onScreenshot}
           className="control-button"
           title="Take Execution Screenshot"
+          disabled={isDisabled}
         >
           <Camera className="h-4 w-4" />
         </Button>

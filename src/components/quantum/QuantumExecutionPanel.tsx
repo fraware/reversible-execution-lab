@@ -9,10 +9,12 @@ import { useToast } from '@/components/ui/use-toast';
 
 interface QuantumExecutionPanelProps {
   quantumCircuit: QuantumCircuit | null;
+  onStepChange?: (step: number) => void;
 }
 
 export const QuantumExecutionPanel: React.FC<QuantumExecutionPanelProps> = ({
-  quantumCircuit
+  quantumCircuit,
+  onStepChange
 }) => {
   const [isExecuting, setIsExecuting] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
@@ -25,17 +27,22 @@ export const QuantumExecutionPanel: React.FC<QuantumExecutionPanelProps> = ({
     setQuantumStates([]);
     setExecutionTime(0);
     setIsExecuting(false);
+    if (onStepChange) onStepChange(0);
   };
 
   const handleStepForward = () => {
     if (currentStep < quantumStates.length - 1) {
-      setCurrentStep(currentStep + 1);
+      const nextStep = currentStep + 1;
+      setCurrentStep(nextStep);
+      if (onStepChange) onStepChange(nextStep);
     }
   };
 
   const handleStepBackward = () => {
     if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
+      const prevStep = currentStep - 1;
+      setCurrentStep(prevStep);
+      if (onStepChange) onStepChange(prevStep);
     }
   };
 
@@ -60,6 +67,7 @@ export const QuantumExecutionPanel: React.FC<QuantumExecutionPanelProps> = ({
         states.push({ ...state });
         setQuantumStates([...states]);
         setCurrentStep(step);
+        if (onStepChange) onStepChange(step);
       });
 
       setQuantumStates([result.initialState, ...result.intermediateStates]);
