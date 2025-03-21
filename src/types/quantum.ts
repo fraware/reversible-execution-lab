@@ -3,7 +3,7 @@ export interface Gate {
   type: 'H' | 'X' | 'Y' | 'Z' | 'CNOT' | 'SWAP';
   position: number;
   control: number;  // Qubit index for single-qubit gates or control qubit for two-qubit gates
-  target?: number;  // Target qubit for two-qubit gates
+  target?: number;  // Target qubit for two-qubit gates or SWAP
 }
 
 export interface QuantumCircuit {
@@ -13,14 +13,14 @@ export interface QuantumCircuit {
   description?: string;
 }
 
-export interface QuantumState {
-  statevector: Complex[];
-  qubitCount: number;
-}
-
 export interface Complex {
   real: number;
   imag: number;
+}
+
+export interface QuantumState {
+  statevector: Complex[];
+  qubitCount: number;
 }
 
 export interface QuantumExecutionState {
@@ -28,3 +28,5 @@ export interface QuantumExecutionState {
   currentStep: number;
   states: QuantumState[];
 }
+
+export type QuantumCircuitName = 'bell' | 'teleportation' | 'grover';
