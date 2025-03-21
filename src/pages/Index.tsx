@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ControlPanel from '@/components/ControlPanel';
@@ -946,3 +947,23 @@ const Index = () => {
                         states: allStates.length > 0 ? 
                           allStates.slice(0, 5).map(s => ({
                             line: s.line,
+                            variables: s.variables.map(v => ({
+                              name: v.name,
+                              value: v.value,
+                              type: v.type
+                            }))
+                          })) : []
+                      }, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Index;
