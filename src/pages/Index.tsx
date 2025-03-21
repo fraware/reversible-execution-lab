@@ -135,6 +135,8 @@ const Index = () => {
   const [quantumCode, setQuantumCode] = useState<string>(sampleQuantumCodes.bell);
   const [quantumCircuit, setQuantumCircuit] = useState<QuantumCircuit | null>(null);
   const [isQuantumMode, setIsQuantumMode] = useState<boolean>(false);
+  const [quantumCurrentStep, setQuantumCurrentStep] = useState<number>(0);
+  const [quantumHighlightGate, setQuantumHighlightGate] = useState<number | undefined>(undefined);
   
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -574,6 +576,8 @@ const Index = () => {
       const parsedCircuit = parseQuantumCode(quantumCode);
       if (parsedCircuit) {
         setQuantumCircuit(parsedCircuit);
+        setQuantumCurrentStep(0);
+        setQuantumHighlightGate(undefined);
       } else {
         toast({
           title: 'Parsing Error',
@@ -595,6 +599,12 @@ const Index = () => {
   useEffect(() => {
     handleUpdateQuantumCircuit();
   }, [quantumCode, handleUpdateQuantumCircuit]);
+
+  // Handle quantum execution state changes
+  const handleQuantumStepChange = (step: number) => {
+    setQuantumCurrentStep(step);
+    setQuantumHighlightGate(step > 0 ? step - 1 : undefined);
+  };
 
   // Toggle quantum mode
   const handleToggleQuantumMode = () => {
@@ -651,7 +661,7 @@ const Index = () => {
             <QuantumModeSelector
               language={language}
               isQuantumMode={isQuantumMode}
-              setIsQuantumMode={setIsQuantumMode}
+              setIsQuantumMode={handleToggleQuantumMode}
               handleSwitchLanguage={handleSwitchLanguage}
               setCode={setCode}
               sampleDataStructureCode={sampleDataStructureCode}
@@ -683,7 +693,10 @@ const Index = () => {
               
               <TabsContent value="execution" className="mt-2">
                 {isQuantumMode ? (
-                  <QuantumExecutionPanel quantumCircuit={quantumCircuit} />
+                  <QuantumExecutionPanel 
+                    quantumCircuit={quantumCircuit} 
+                    onStepChange={handleQuantumStepChange}
+                  />
                 ) : (
                   <CodeViewer 
                     code={code} 
@@ -698,14 +711,15 @@ const Index = () => {
             </Tabs>
             
             <ControlPanel
-              onStepBack={isQuantumMode ? handleUpdateQuantumCircuit : handleStepBack}
-              onStepForward={isQuantumMode ? handleUpdateQuantumCircuit : handleStepForward}
-              onPlay={isQuantumMode ? handleUpdateQuantumCircuit : handlePlay}
-              onPause={isQuantumMode ? handleUpdateQuantumCircuit : handlePause}
-              onReset={isQuantumMode ? handleUpdateQuantumCircuit : handleReset}
-              onCheckpoint={isQuantumMode ? handleUpdateQuantumCircuit : handleCheckpoint}
-              onJumpToCheckpoint={isQuantumMode ? handleUpdateQuantumCircuit : handleJumpToCheckpoint}
+              onStepBack={isQuantumMode ? undefined : handleStepBack}
+              onStepForward={isQuantumMode ? undefined : handleStepForward}
+              onPlay={isQuantumMode ? undefined : handlePlay}
+              onPause={isQuantumMode ? undefined : handlePause}
+              onReset={isQuantumMode ? undefined : handleReset}
+              onCheckpoint={isQuantumMode ? undefined : handleCheckpoint}
+              onJumpToCheckpoint={isQuantumMode ? undefined : handleJumpToCheckpoint}
               isPlaying={isPlaying}
+              isDisabled={isQuantumMode}
             />
             
             {!isQuantumMode && (
@@ -812,6 +826,8 @@ const Index = () => {
                 currentQuantumCircuit={currentQuantumCircuit}
                 setCurrentQuantumCircuit={setCurrentQuantumCircuit}
                 sampleQuantumCircuits={sampleQuantumCircuits}
+                currentStep={quantumCurrentStep}
+                highlightGate={quantumHighlightGate}
               />
             )}
             

@@ -30,3 +30,11 @@ export interface QuantumExecutionState {
 }
 
 export type QuantumCircuitName = 'bell' | 'teleportation' | 'grover';
+
+// Quantum execution result for visualization
+export interface QuantumExecutionResult {
+  initialState: QuantumState;
+  finalState: QuantumState;
+  intermediateStates: QuantumState[];
+  executionTime: number;
+}

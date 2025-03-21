@@ -14,16 +14,19 @@ interface QuantumCircuit {
   gates: Gate[];
   name?: string;
   description?: string;
+  highlightGate?: number; // Index of gate to highlight
 }
 
 interface QuantumCircuitVisualizerProps {
   circuit: QuantumCircuit;
   className?: string;
+  highlightGate?: number; // Gate index to highlight
 }
 
 export const QuantumCircuitVisualizer: React.FC<QuantumCircuitVisualizerProps> = ({
   circuit,
   className = '',
+  highlightGate
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -50,8 +53,13 @@ export const QuantumCircuitVisualizer: React.FC<QuantumCircuitVisualizerProps> =
     // Clear canvas
     ctx.clearRect(0, 0, dimensions.width, dimensions.height);
 
-    drawQuantumCircuit(ctx, circuit, dimensions);
-  }, [circuit, dimensions]);
+    // Use either prop highlightGate or circuit's highlightGate
+    const activeHighlightGate = highlightGate !== undefined ? 
+      highlightGate : 
+      circuit.highlightGate;
+
+    drawQuantumCircuit(ctx, circuit, dimensions, activeHighlightGate);
+  }, [circuit, dimensions, highlightGate]);
 
   return (
     <div 
@@ -80,7 +88,8 @@ export const QuantumCircuitVisualizer: React.FC<QuantumCircuitVisualizerProps> =
 function drawQuantumCircuit(
   ctx: CanvasRenderingContext2D,
   circuit: QuantumCircuit,
-  dimensions: { width: number; height: number }
+  dimensions: { width: number; height: number },
+  highlightGateIndex?: number
 ) {
   const { qubits, gates } = circuit;
   const { width, height } = dimensions;
@@ -112,16 +121,19 @@ function drawQuantumCircuit(
   }
   
   // Draw gates
-  for (const gate of gates) {
+  for (let i = 0; i < gates.length; i++) {
+    const gate = gates[i];
     const x = padding + gate.position * gateSpacing;
-    const y = padding + gate.position * qubitSpacing;
+    
+    // Check if this gate should be highlighted
+    const isHighlighted = highlightGateIndex !== undefined && i === highlightGateIndex;
     
     switch (gate.type) {
       case 'H':
       case 'X':
       case 'Y':
       case 'Z':
-        drawSingleQubitGate(ctx, gate.type, x, padding + gate.position * qubitSpacing);
+        drawSingleQubitGate(ctx, gate.type, x, padding + gate.control * qubitSpacing, isHighlighted);
         break;
       case 'CNOT':
         if (typeof gate.control === 'number' && typeof gate.target === 'number') {
@@ -129,7 +141,8 @@ function drawQuantumCircuit(
             ctx, 
             x, 
             padding + gate.control * qubitSpacing, 
-            padding + gate.target * qubitSpacing
+            padding + gate.target * qubitSpacing,
+            isHighlighted
           );
         }
         break;
@@ -139,7 +152,8 @@ function drawQuantumCircuit(
             ctx, 
             x, 
             padding + gate.control * qubitSpacing, 
-            padding + gate.target * qubitSpacing
+            padding + gate.target * qubitSpacing,
+            isHighlighted
           );
         }
         break;
@@ -151,16 +165,29 @@ function drawSingleQubitGate(
   ctx: CanvasRenderingContext2D, 
   gateType: 'H' | 'X' | 'Y' | 'Z', 
   x: number, 
-  y: number
+  y: number,
+  highlight: boolean = false
 ) {
   // Draw gate box
   ctx.fillStyle = getGateColor(gateType);
-  ctx.strokeStyle = '#000';
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = highlight ? '#f59e0b' : '#000';
+  ctx.lineWidth = highlight ? 2 : 1;
   
   const size = 24;
+  
+  // Draw highlight glow if needed
+  if (highlight) {
+    ctx.save();
+    ctx.shadowColor = '#f59e0b';
+    ctx.shadowBlur = 10;
+  }
+  
   ctx.fillRect(x - size/2, y - size/2, size, size);
   ctx.strokeRect(x - size/2, y - size/2, size, size);
+  
+  if (highlight) {
+    ctx.restore();
+  }
   
   // Draw gate label
   ctx.fillStyle = '#000';
@@ -174,18 +201,27 @@ function drawCNOTGate(
   ctx: CanvasRenderingContext2D, 
   x: number, 
   controlY: number, 
-  targetY: number
+  targetY: number,
+  highlight: boolean = false
 ) {
   // Draw vertical line connecting control and target
-  ctx.strokeStyle = '#000';
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = highlight ? '#f59e0b' : '#000';
+  ctx.lineWidth = highlight ? 2 : 1;
+  
+  // Draw highlight glow if needed
+  if (highlight) {
+    ctx.save();
+    ctx.shadowColor = '#f59e0b';
+    ctx.shadowBlur = 8;
+  }
+  
   ctx.beginPath();
   ctx.moveTo(x, controlY);
   ctx.lineTo(x, targetY);
   ctx.stroke();
   
   // Draw control point (filled circle)
-  ctx.fillStyle = '#000';
+  ctx.fillStyle = highlight ? '#f59e0b' : '#000';
   ctx.beginPath();
   ctx.arc(x, controlY, 4, 0, Math.PI * 2);
   ctx.fill();
@@ -203,17 +239,30 @@ function drawCNOTGate(
   ctx.moveTo(x, targetY - targetSize);
   ctx.lineTo(x, targetY + targetSize);
   ctx.stroke();
+  
+  if (highlight) {
+    ctx.restore();
+  }
 }
 
 function drawSWAPGate(
   ctx: CanvasRenderingContext2D, 
   x: number, 
   y1: number, 
-  y2: number
+  y2: number,
+  highlight: boolean = false
 ) {
   // Draw vertical line connecting the swap points
-  ctx.strokeStyle = '#000';
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = highlight ? '#f59e0b' : '#000';
+  ctx.lineWidth = highlight ? 2 : 1;
+  
+  // Draw highlight glow if needed
+  if (highlight) {
+    ctx.save();
+    ctx.shadowColor = '#f59e0b';
+    ctx.shadowBlur = 8;
+  }
+  
   ctx.beginPath();
   ctx.moveTo(x, y1);
   ctx.lineTo(x, y2);
@@ -235,6 +284,10 @@ function drawSWAPGate(
   ctx.moveTo(x + size, y2 - size);
   ctx.lineTo(x - size, y2 + size);
   ctx.stroke();
+  
+  if (highlight) {
+    ctx.restore();
+  }
 }
 
 function getGateColor(gateType: 'H' | 'X' | 'Y' | 'Z'): string {
