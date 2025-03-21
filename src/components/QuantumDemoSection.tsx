@@ -14,8 +14,8 @@ const sampleCircuits = {
     description: 'Creates a maximally entangled state |00⟩ + |11⟩',
     qubits: 2,
     gates: [
-      { type: 'H', position: 1, control: 0 },
-      { type: 'CNOT', position: 2, control: 0, target: 1 }
+      { type: 'H' as const, position: 1, control: 0 },
+      { type: 'CNOT' as const, position: 2, control: 0, target: 1 }
     ]
   },
   teleportation: {
@@ -23,12 +23,12 @@ const sampleCircuits = {
     description: 'Protocol to transfer quantum state using entanglement',
     qubits: 3,
     gates: [
-      { type: 'H', position: 1, control: 1 },
-      { type: 'CNOT', position: 2, control: 1, target: 2 },
-      { type: 'CNOT', position: 3, control: 0, target: 1 },
-      { type: 'H', position: 4, control: 0 },
-      { type: 'X', position: 5, control: 1 },
-      { type: 'Z', position: 5, control: 0 }
+      { type: 'H' as const, position: 1, control: 1 },
+      { type: 'CNOT' as const, position: 2, control: 1, target: 2 },
+      { type: 'CNOT' as const, position: 3, control: 0, target: 1 },
+      { type: 'H' as const, position: 4, control: 0 },
+      { type: 'X' as const, position: 5, control: 1 },
+      { type: 'Z' as const, position: 5, control: 0 }
     ]
   },
   grover: {
@@ -36,21 +36,21 @@ const sampleCircuits = {
     description: 'Quantum search algorithm for unstructured databases',
     qubits: 3,
     gates: [
-      { type: 'H', position: 1, control: 0 },
-      { type: 'H', position: 1, control: 1 },
-      { type: 'H', position: 1, control: 2 },
-      { type: 'X', position: 2, control: 0 },
-      { type: 'X', position: 2, control: 1 },
-      { type: 'X', position: 2, control: 2 },
-      { type: 'H', position: 3, control: 2 },
-      { type: 'CNOT', position: 4, control: 0, target: 2 },
-      { type: 'H', position: 5, control: 2 },
-      { type: 'X', position: 6, control: 0 },
-      { type: 'X', position: 6, control: 1 },
-      { type: 'X', position: 6, control: 2 },
-      { type: 'H', position: 7, control: 0 },
-      { type: 'H', position: 7, control: 1 },
-      { type: 'H', position: 7, control: 2 }
+      { type: 'H' as const, position: 1, control: 0 },
+      { type: 'H' as const, position: 1, control: 1 },
+      { type: 'H' as const, position: 1, control: 2 },
+      { type: 'X' as const, position: 2, control: 0 },
+      { type: 'X' as const, position: 2, control: 1 },
+      { type: 'X' as const, position: 2, control: 2 },
+      { type: 'H' as const, position: 3, control: 2 },
+      { type: 'CNOT' as const, position: 4, control: 0, target: 2 },
+      { type: 'H' as const, position: 5, control: 2 },
+      { type: 'X' as const, position: 6, control: 0 },
+      { type: 'X' as const, position: 6, control: 1 },
+      { type: 'X' as const, position: 6, control: 2 },
+      { type: 'H' as const, position: 7, control: 0 },
+      { type: 'H' as const, position: 7, control: 1 },
+      { type: 'H' as const, position: 7, control: 2 }
     ]
   }
 };
