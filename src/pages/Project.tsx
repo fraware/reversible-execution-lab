@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, ArrowRight, Github, User, Bot, Cpu, Bookmark, Eye, ArrowLeftRight } from 'lucide-react';
+import QuantumDemoSection from '@/components/QuantumDemoSection';
 
 const Project: React.FC = () => {
   return (
@@ -172,6 +173,11 @@ const Project: React.FC = () => {
         </div>
       </section>
 
+      {/* Quantum Visualization Section */}
+      <section className="py-16 px-4 md:px-8 bg-muted/30" id="quantum">
+        <QuantumDemoSection />
+      </section>
+
       {/* Demo Section Placeholder */}
       <section className="py-16 px-4 md:px-8 bg-muted/30" id="demo">
         <div className="container mx-auto text-center">
@@ -193,7 +199,7 @@ const Project: React.FC = () => {
       </section>
 
       {/* Community & Contribution */}
-      <section className="py-16 px-4 md:px-8" id="community">
+      <section className="py-16 px-4 md:px-8 bg-muted/30" id="community">
         <div className="container mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-16">Community & Contributions</h2>
           
